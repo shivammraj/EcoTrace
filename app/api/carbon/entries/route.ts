@@ -4,6 +4,8 @@ import { calculateFootprint, DEFAULT_FACTORS } from '@/lib/calculator';
 import { calculatorInputSchema } from '@/lib/validation';
 import db from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 async function getAuthUser(request: Request) {
   const authHeader = request.headers.get('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;

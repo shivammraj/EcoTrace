@@ -3,6 +3,8 @@ import { verifyAccessToken } from '@/lib/auth';
 import { NATIONAL_AVG_KG, GLOBAL_AVG_KG } from '@/lib/calculator';
 import db from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 async function getAuthUser(request: Request) {
   const authHeader = request.headers.get('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
