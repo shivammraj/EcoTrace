@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Plus, LogOut, Calendar, BarChart2, AlertCircle,
-  RefreshCw, Check, Download, Trash2, FilePlus
+  RefreshCw, Check, Download, Trash2
 } from 'lucide-react';
 import CarbonReceipt from '@/components/ui/CarbonReceipt';
 import EcoQuotes from '@/components/ui/EcoQuotes';
-import { CalculatorInput, calculateFootprint, DEFAULT_FACTORS } from '@/lib/calculator';
+import { CalculatorInput, calculateFootprint } from '@/lib/calculator';
 
 interface UserProfile {
   id: string;
@@ -30,6 +31,7 @@ interface HistoricalSession {
 }
 
 export default function Dashboard() {
+  const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [summary, setSummary] = useState<any>(null);
@@ -51,40 +53,7 @@ export default function Dashboard() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [deletingEntry, setDeletingEntry] = useState<string | null>(null); // date string being deleted
 
-  // Authenticate and token setup
-  useEffect(() => {
-    const handleAuth = async () => {
-      // 1. Check URL query params for redirect token from Google callback
-      const params = new URLSearchParams(window.location.search);
-      const urlToken = params.get('token');
 
-      let currentToken = urlToken;
-
-      if (urlToken) {
-        localStorage.setItem('access_token', urlToken);
-        // Clean up URL parameters
-        const cleanUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
-      } else {
-        // 2. Read from localStorage
-        currentToken = localStorage.getItem('access_token');
-      }
-
-      if (!currentToken) {
-        // 3. Try to refresh using httpOnly cookie
-        const refreshed = await attemptTokenRefresh();
-        if (!refreshed) {
-          window.location.href = '/';
-          return;
-        }
-      } else {
-        setToken(currentToken);
-        await fetchUserData(currentToken);
-      }
-    };
-
-    handleAuth();
-  }, []);
 
   const attemptTokenRefresh = async (): Promise<boolean> => {
     try {
@@ -98,7 +67,7 @@ export default function Dashboard() {
         return true;
       }
       return false;
-    } catch (e) {
+    } catch {
       return false;
     }
   };
@@ -112,7 +81,7 @@ export default function Dashboard() {
       if (res.status === 401) {
         // Token might have expired, try refresh
         const refreshed = await attemptTokenRefresh();
-        if (!refreshed) window.location.href = '/';
+        if (!refreshed) router.push('/');
         return;
       }
 
@@ -121,7 +90,7 @@ export default function Dashboard() {
         setUser(data.user);
         await fetchSummaryAndHistory(authToken);
       } else {
-        window.location.href = '/';
+        router.push('/');
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -177,14 +146,50 @@ export default function Dashboard() {
     }
   };
 
+  // Authenticate and token setup
+  useEffect(() => {
+    const handleAuth = async () => {
+      // 1. Check URL query params for redirect token from Google callback
+      const params = new URLSearchParams(window.location.search);
+      const urlToken = params.get('token');
+
+      let currentToken = urlToken;
+
+      if (urlToken) {
+        localStorage.setItem('access_token', urlToken);
+        // Clean up URL parameters
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      } else {
+        // 2. Read from localStorage
+        currentToken = localStorage.getItem('access_token');
+      }
+
+      if (!currentToken) {
+        // 3. Try to refresh using httpOnly cookie
+        const refreshed = await attemptTokenRefresh();
+        if (!refreshed) {
+          router.push('/');
+          return;
+        }
+      } else {
+        setToken(currentToken);
+        await fetchUserData(currentToken);
+      }
+    };
+
+    handleAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
+
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (e) {
+    } catch {
       console.warn('Logout endpoint failed, clearing localStorage anyway');
     }
     localStorage.removeItem('access_token');
-    window.location.href = '/';
+    router.push('/');
   };
 
   const handleFormInputChange = (category: string, field: string, value: any) => {
@@ -1047,7 +1052,7 @@ export default function Dashboard() {
               </div>
               <p className="font-sans text-xs text-graphite/70 leading-relaxed">
                 You have not saved any calculations to your profile yet! Your dashboard is currently showing estimates based on local parameters. 
-                Click **"LOG NEW ENTRY"** above to enter your current transport, energy, and diet details and commit them to your personal ledger database.
+                Click **&quot;LOG NEW ENTRY&quot;** above to enter your current transport, energy, and diet details and commit them to your personal ledger database.
               </p>
             </div>
           )}

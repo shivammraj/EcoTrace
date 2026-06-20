@@ -30,8 +30,9 @@ async function main() {
     try {
       console.log(`Executing:\n${statement}\n`);
       await prisma.$executeRawUnsafe(statement);
-    } catch (e: any) {
-      if (e.message && (e.message.includes('already exists') || e.message.includes('42710'))) {
+    } catch (e) {
+      const err = e as Error & { code?: string };
+      if (err.message && (err.message.includes('already exists') || err.message.includes('42710'))) {
         console.log(`--> Policy already exists. Skipping.`);
       } else {
         throw e;

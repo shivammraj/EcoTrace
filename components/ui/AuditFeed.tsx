@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Activity, Wifi, AlertTriangle, Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Activity, Wifi, Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 
 // ─── Data generation helpers ─────────────────────────────────────────────────
 
@@ -139,15 +139,17 @@ const MAX_ENTRIES = 12; // cap visible log rows
 
 export default function AuditFeed() {
   const [mounted, setMounted] = useState(false);
-  const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [entries, setEntries] = useState<AuditEntry[]>(() => generateInitialFeed());
   const [liveCount, setLiveCount] = useState(0);
   const [isLive, setIsLive] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const feedRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setMounted(true);
-    setEntries(generateInitialFeed());
+    const timer = setTimeout(() => {
+      setMounted(true);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const pushEntry = useCallback(() => {
@@ -181,9 +183,10 @@ export default function AuditFeed() {
   }, [isLive, pushEntry]);
 
   // Auto-scroll to top when new entry arrives
+  const latestEntryId = entries[0]?.id;
   useEffect(() => {
     feedRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [entries[0]?.id]);
+  }, [latestEntryId]);
 
   if (!mounted) {
     return (

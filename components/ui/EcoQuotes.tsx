@@ -254,7 +254,7 @@ export default function EcoQuotes({ worstCategory = 'transport' }: EcoQuotesProp
           </span>
 
           <blockquote className="font-sans text-sm text-graphite/80 leading-relaxed italic mb-3">
-            "{q.text}"
+            &quot;{q.text}&quot;
           </blockquote>
 
           <p className="font-mono text-[10px] text-graphite/40 font-bold uppercase tracking-wider">

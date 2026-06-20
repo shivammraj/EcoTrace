@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Car, Zap, Flame, Trash2, ArrowRight, Mail, Lock, User, 
-  Check, AlertCircle, Sparkles, RefreshCw, ChevronRight, Users, Database, TrendingUp, Activity
+  Car, Zap, Mail, Lock, User, 
+  Check, AlertCircle, Sparkles, ChevronRight, Users, Database, TrendingUp, Activity
 } from 'lucide-react';
 import CarbonReceipt from '@/components/ui/CarbonReceipt';
 import AuditFeed from '@/components/ui/AuditFeed';
@@ -28,7 +28,7 @@ export default function LandingPage() {
   });
 
   // Calculate footprint locally for sub-millisecond updates
-  const [calcResult, setCalcResult] = useState(() => calculateFootprint(inputs));
+  const calcResult = calculateFootprint(inputs);
   
   // Active tab in calculator questionnaire
   const [activeStep, setActiveStep] = useState<'transport' | 'energy' | 'diet' | 'waste'>('transport');
@@ -57,10 +57,6 @@ export default function LandingPage() {
   });
   const [statsRefreshedAt, setStatsRefreshedAt] = useState<Date | null>(null);
 
-  // Re-calculate when inputs change
-  useEffect(() => {
-    setCalcResult(calculateFootprint(inputs));
-  }, [inputs]);
 
   // Fetch live stats from API — refresh every 30 s
   const fetchStats = () => {
@@ -167,7 +163,7 @@ export default function LandingPage() {
       } else {
         window.location.href = '/dashboard';
       }
-    } catch (error) {
+    } catch {
       window.location.href = '/dashboard';
     }
   };
@@ -537,7 +533,7 @@ export default function LandingPage() {
               <span className="font-mono text-3xl text-ledger-red font-bold">02.</span>
               <h3 className="font-display font-bold text-lg uppercase text-graphite">Inspect the Invoice</h3>
               <p className="text-sm text-graphite/70 leading-relaxed">
-                Review your itemized carbon receipt instantly. See exactly where your highest emissions originate and compare your footprint against India's target.
+                Review your itemized carbon receipt instantly. See exactly where your highest emissions originate and compare your footprint against India&apos;s target.
               </p>
             </div>
             <div className="space-y-3">

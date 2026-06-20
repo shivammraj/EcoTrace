@@ -104,7 +104,10 @@ export default function CarbonReceipt({
   const [receiptId, setReceiptId] = React.useState('ET-000000');
 
   React.useEffect(() => {
-    setReceiptId(`ET-${Math.floor(100000 + Math.random() * 900000)}`);
+    const timer = setTimeout(() => {
+      setReceiptId(`ET-${Math.floor(100000 + Math.random() * 900000)}`);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
