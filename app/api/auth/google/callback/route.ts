@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = new URL(request.url).origin;
 
     if (!code) {
       return NextResponse.redirect(`${appUrl}/?error=google_oauth_failed`);
@@ -137,7 +137,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${appUrl}/dashboard?token=${encodeURIComponent(accessToken)}`);
   } catch (error) {
     console.error('Google OAuth callback handler error:', error);
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = new URL(request.url).origin;
     return NextResponse.redirect(`${appUrl}/?error=unexpected_oauth_error`);
   }
 }

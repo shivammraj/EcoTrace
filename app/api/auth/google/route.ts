@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { origin } = new URL(request.url);
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const redirectUri = `${appUrl}/api/auth/google/callback`;
+  const redirectUri = `${origin}/api/auth/google/callback`;
 
   // Sandbox bypass if credentials are placeholder
   if (!clientId || clientId === 'placeholder-google-client-id' || !clientSecret || clientSecret === 'placeholder-google-client-secret') {
