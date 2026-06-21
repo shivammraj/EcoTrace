@@ -771,9 +771,9 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <div className="h-2.5 w-2.5 rounded-full bg-ledger-red"></div>
-            <span className="font-display font-bold text-base uppercase tracking-wider text-graphite">
+            <h1 className="font-display font-bold text-base uppercase tracking-wider text-graphite">
               EcoTrace 🇮🇳 Dashboard
-            </span>
+            </h1>
           </div>
 
           <div className="flex items-center gap-6">

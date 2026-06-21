@@ -22,12 +22,24 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "EcoTrace 🇮🇳 — Your Carbon Footprint, Made Visible",
-  description: "Know your carbon footprint in 60 seconds — then start shrinking it. Track emissions across transport, energy, diet, and waste, and save your history.",
-  metadataBase: new URL("http://localhost:3000"),
+  description: "Know your carbon footprint in 60 seconds — then start shrinking it. Track emissions across transport, energy, diet, and waste for a greener India.",
+  keywords: ["carbon footprint", "CO2 tracker", "India emissions", "climate change", "sustainability", "eco tracker"],
+  authors: [{ name: "EcoTrace" }],
+  robots: "index, follow",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "https://carbon-footprint-nine-dun.vercel.app"
+  ),
   openGraph: {
-    title: "EcoTrace 🇮🇳 — Carbon Footprint awareness",
-    description: "Measure, understand, and reduce your environmental footprint.",
+    title: "EcoTrace 🇮🇳 — Carbon Footprint Ledger",
+    description: "Measure, understand, and reduce your environmental footprint with India's premier carbon tracking tool.",
     type: "website",
+    locale: "en_IN",
+    siteName: "EcoTrace",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "EcoTrace 🇮🇳 — Know Your Carbon Footprint",
+    description: "Track your CO2 emissions across transport, energy, diet, and waste.",
   },
 };
 

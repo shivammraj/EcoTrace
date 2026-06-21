@@ -19,10 +19,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch all entries for user ordered by date desc
+    // Fetch recent entries for user ordered by date desc (limit to 500 for efficiency)
     const allEntries = await db.emissionEntry.findMany({
       where: { userId: user.userId },
       orderBy: { entryDate: 'desc' },
+      take: 500,
     });
 
     if (allEntries.length === 0) {

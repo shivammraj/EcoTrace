@@ -142,9 +142,9 @@ export default function CarbonReceipt({
       </div>
 
       {/* Line Items */}
-      <div className="flex-1 space-y-4">
+      <ul className="flex-1 space-y-4">
         {/* Category: Transport */}
-        <div>
+        <li className="list-none">
           <div className="flex justify-between font-bold text-xs uppercase text-graphite/80 mb-1">
             <span>01 / TRANSPORT EMISSIONS</span>
           </div>
@@ -179,10 +179,10 @@ export default function CarbonReceipt({
               </div>
             )}
           </div>
-        </div>
+        </li>
 
         {/* Category: Energy */}
-        <div>
+        <li className="list-none">
           <div className="flex justify-between font-bold text-xs uppercase text-graphite/80 mb-1">
             <span>02 / HOUSEHOLD ENERGY</span>
           </div>
@@ -223,10 +223,10 @@ export default function CarbonReceipt({
               </div>
             )}
           </div>
-        </div>
+        </li>
 
         {/* Category: Diet */}
-        <div>
+        <li className="list-none">
           <div className="flex justify-between font-bold text-xs uppercase text-graphite/80 mb-1">
             <span>03 / DIETARY PROFILE</span>
           </div>
@@ -241,10 +241,10 @@ export default function CarbonReceipt({
               </span>
             </div>
           </div>
-        </div>
+        </li>
 
         {/* Category: Waste */}
-        <div>
+        <li className="list-none">
           <div className="flex justify-between font-bold text-xs uppercase text-graphite/80 mb-1">
             <span>04 / WASTE REDUCTION</span>
           </div>
@@ -259,8 +259,9 @@ export default function CarbonReceipt({
               </span>
             </div>
           </div>
-        </div>
-      </div>
+        </li>
+      </ul>
+
 
       <div className="border-t border-double border-graphite/40 my-4"></div>
 

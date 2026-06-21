@@ -458,12 +458,17 @@ export default function LandingPage() {
 
                   <div className="border border-graphite/10 rounded p-4 bg-paper/40 flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <span className="text-xs font-bold font-display uppercase tracking-wider block">Rooftop Solar Array</span>
-                      <span className="text-[10px] text-graphite/50 font-sans block">Reduces grid-tied electricity emissions by 70%</span>
+                      <span className="text-xs font-bold font-display uppercase tracking-wider block" id="solar-label">Rooftop Solar Array</span>
+                      <span className="text-[10px] text-graphite/50 font-sans block" id="solar-desc">Reduces grid-tied electricity emissions by 70%</span>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <label className="relative inline-flex items-center cursor-pointer" htmlFor="solar-toggle">
                       <input
+                        id="solar-toggle"
                         type="checkbox"
+                        role="switch"
+                        aria-labelledby="solar-label"
+                        aria-describedby="solar-desc"
+                        aria-checked={inputs.energy.hasSolar ?? false}
                         checked={inputs.energy.hasSolar ?? false}
                         onChange={(e) => handleInputChange('energy', 'hasSolar', e.target.checked)}
                         className="sr-only peer"
@@ -851,11 +856,25 @@ export default function LandingPage() {
       {/* Authentication Modal */}
       <AnimatePresence>
         {showAuthModal && (
-          <div className="fixed inset-0 bg-graphite/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div
+            className="fixed inset-0 bg-graphite/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            role="presentation"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowAuthModal(false);
+                setAuthError('');
+                setAuthSuccess('');
+              }
+            }}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="auth-modal-title"
+              aria-describedby="auth-modal-desc"
               className="bg-paper text-graphite p-6 md:p-8 rounded-lg border border-graphite/10 max-w-md w-full relative shadow-2xl space-y-6"
             >
               <button
@@ -871,10 +890,10 @@ export default function LandingPage() {
               </button>
 
               <div className="text-center space-y-1">
-                <h3 className="font-display font-bold text-xl uppercase tracking-wider">
+                <h3 id="auth-modal-title" className="font-display font-bold text-xl uppercase tracking-wider">
                   {authMode === 'register' ? 'CREATE ACCOUNT' : 'USER LOGIN'}
                 </h3>
-                <p className="text-xs text-graphite/50">
+                <p id="auth-modal-desc" className="text-xs text-graphite/50">
                   {authMode === 'register' 
                     ? 'Save your carbon receipts and tracking history.' 
                     : 'Access your saved calculations and dashboard.'}

@@ -4,8 +4,37 @@ import db from '@/lib/db';
 import { comparePassword, generateRandomToken, hashToken, signAccessToken } from '@/lib/auth';
 import { loginSchema } from '@/lib/validation';
 
+// Simple in-memory rate limiter: max 10 login attempts per IP per 15 minutes
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function checkLoginRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const WINDOW_MS = 15 * 60 * 1000;
+  const MAX_ATTEMPTS = 10;
+
+  const entry = loginAttempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    loginAttempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= MAX_ATTEMPTS) {
+    return false;
+  }
+  entry.count++;
+  return true;
+}
+
 export async function POST(request: Request) {
   try {
+    // Rate limiting for brute-force protection
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    if (!checkLoginRateLimit(ip)) {
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please try again in 15 minutes.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const result = loginSchema.safeParse(body);
 

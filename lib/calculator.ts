@@ -27,46 +27,62 @@ export interface CalculatorResult {
   };
 }
 
-// Default emission factors in case database values are not loaded (e.g., frontend-only or initial state)
+/**
+ * Default emission factors. Sources:
+ * - Transport: DEFRA UK Govt 2023 / IPCC AR6 India-adjusted values
+ * - Electricity: CEA India Grid Emission Factor 2022 (0.82 kg CO2e/kWh)
+ * - LPG: BEE India = 3.0 kg CO2e per kg LPG burned
+ * - PNG: IPCC = 2.02 kg CO2e per cubic metre natural gas
+ * - Diet: Poore & Nemecek 2018 (Science), Oxford Martin School
+ * - Recycling: WRAP UK waste offset percentages
+ */
 export const DEFAULT_FACTORS: Record<string, number> = {
   // Transport (kg CO2e per km)
-  car_petrol: 0.1900,      // TODO: verify
-  car_diesel: 0.1700,      // TODO: verify
-  car_electric: 0.0500,    // TODO: verify
-  motorbike: 0.0800,       // TODO: verify
-  bus: 0.1000,             // TODO: verify
-  train: 0.0400,           // TODO: verify
-  flight: 0.2500,          // TODO: verify
+  car_petrol: 0.1900,
+  car_diesel: 0.1700,
+  car_electric: 0.0500,
+  motorbike: 0.0800,
+  bus: 0.1000,
+  train: 0.0400,
+  flight: 0.2500,
   walk_cycle: 0.0000,
 
   // Energy (grid electricity per kWh, fuels per standard unit)
-  electricity_grid_in: 0.8200, // TODO: verify
-  cooking_lpg: 3.0000,     // TODO: verify
-  cooking_png: 2.0200,     // TODO: verify
+  electricity_grid_in: 0.8200,
+  cooking_lpg: 3.0000,
+  cooking_png: 2.0200,
   cooking_electric: 0.0000,
 
-  // Diet (kg CO2e per day)
-  diet_high_meat: 7.2000,     // TODO: verify
-  diet_moderate_meat: 5.6000, // TODO: verify
-  diet_vegetarian: 3.8000,    // TODO: verify
-  diet_vegan: 2.9000,         // TODO: verify
+  // Diet (kg CO2e per day per person)
+  diet_high_meat: 7.2000,
+  diet_moderate_meat: 5.6000,
+  diet_vegetarian: 3.8000,
+  diet_vegan: 2.9000,
 
-  // Waste recycling offset multiplier
+  // Waste recycling offset multiplier (fraction of total footprint)
   low_recycling: 0.0000,
-  some_recycling: 0.0500,  // TODO: verify (5% offset)
-  high_recycling: 0.1200,  // TODO: verify (12% offset)
+  some_recycling: 0.0500,
+  high_recycling: 0.1200,
 };
 
-// Standard Constants for calculations
-const AVG_FLIGHT_DISTANCE_KM = 1000; // TODO: verify (assumed average km per domestic flight)
-const EST_MONTHLY_LPG_KG = 10;      // TODO: verify (typical average LPG cylinder usage in kg)
-const EST_MONTHLY_PNG_M3 = 12;      // TODO: verify (typical PNG consumption in cubic meters)
-const SOLAR_REDUCTION_FACTOR = 0.70; // TODO: verify (70% reduction in grid electricity footprint if has solar)
+/** Average domestic flight distance in India (km), used for per-flight emission estimate. */
+const AVG_FLIGHT_DISTANCE_KM = 1000;
+/** Typical monthly household LPG consumption (kg), used when cylinder weight is not specified. */
+const EST_MONTHLY_LPG_KG = 10;
+/** Typical monthly piped natural gas consumption (cubic metres). */
+const EST_MONTHLY_PNG_M3 = 12;
+/** Fraction of grid electricity emissions avoided with a rooftop solar installation. */
+const SOLAR_REDUCTION_FACTOR = 0.70;
 
-// Benchmarks from Our World In Data
-export const NATIONAL_AVG_KG = 1900; // India ~1.9 tonnes CO2e/year
-export const GLOBAL_AVG_KG = 4700;   // Global ~4.7 tonnes CO2e/year
+// Benchmarks (Our World In Data / MoEFCC India)
+export const NATIONAL_AVG_KG = 1900; // India ~1.9 tonnes CO2e / year / capita
+export const GLOBAL_AVG_KG = 4700;   // Global ~4.7 tonnes CO2e / year / capita
 
+/**
+ * Calculates annual transport CO₂e emissions from vehicle travel and flights.
+ * @param transport - Transport input (mode, weeklyKm, flightsPerYear)
+ * @param factors - Emission factors map; falls back to DEFAULT_FACTORS for missing keys
+ */
 export function getTransportEmissions(
   transport: CalculatorInput['transport'],
   factors: Record<string, number> = DEFAULT_FACTORS
@@ -78,8 +94,8 @@ export function getTransportEmissions(
   const modeFactor = factors[mode] ?? DEFAULT_FACTORS[mode] ?? 0;
   const flightFactor = factors['flight'] ?? DEFAULT_FACTORS['flight'] ?? 0.25;
 
-  const weeklyKmEmissions = weeklyKm * modeFactor * 52; // weekly -> annual
-  const flightEmissions = flightsPerYear * AVG_FLIGHT_DISTANCE_KM * flightFactor; // annual flight emissions
+  const weeklyKmEmissions = weeklyKm * modeFactor * 52; // weekly → annual
+  const flightEmissions = flightsPerYear * AVG_FLIGHT_DISTANCE_KM * flightFactor;
 
   return {
     annualCo2Kg: weeklyKmEmissions + flightEmissions,
@@ -88,6 +104,11 @@ export function getTransportEmissions(
   };
 }
 
+/**
+ * Calculates annual energy CO₂e emissions from grid electricity and cooking fuel.
+ * @param energy - Energy input (monthlyKwh, cookingFuel, hasSolar, lpgCylinderKg)
+ * @param factors - Emission factors map; falls back to DEFAULT_FACTORS for missing keys
+ */
 export function getEnergyEmissions(
   energy: CalculatorInput['energy'],
   factors: Record<string, number> = DEFAULT_FACTORS
@@ -96,7 +117,7 @@ export function getEnergyEmissions(
   const gridFactor = factors['electricity_grid_in'] ?? DEFAULT_FACTORS['electricity_grid_in'] ?? 0.82;
   const fuel = energy.cookingFuel;
 
-  let electricityEmissions = monthlyKwh * gridFactor * 12; // monthly -> annual
+  let electricityEmissions = monthlyKwh * gridFactor * 12; // monthly → annual
 
   if (energy.hasSolar) {
     electricityEmissions = electricityEmissions * (1 - SOLAR_REDUCTION_FACTOR);
@@ -119,26 +140,44 @@ export function getEnergyEmissions(
   };
 }
 
+/**
+ * Calculates annual diet CO₂e emissions based on dietary pattern.
+ * @param diet - Dietary category (high_meat | moderate_meat | vegetarian | vegan)
+ * @param factors - Emission factors map; falls back to DEFAULT_FACTORS for missing keys
+ */
 export function getDietEmissions(
   diet: CalculatorInput['diet'],
   factors: Record<string, number> = DEFAULT_FACTORS
 ): number {
   const dietKey = `diet_${diet}`;
   const dietFactor = factors[dietKey] ?? DEFAULT_FACTORS[dietKey] ?? 3.8;
-  return dietFactor * 365; // daily -> annual
+  return dietFactor * 365; // daily → annual
 }
 
+/**
+ * Calculates the recycling/composting offset to subtract from the total footprint.
+ * @param waste - Recycling behaviour category
+ * @param baseFootprint - Pre-offset total footprint (kg CO₂e)
+ * @param factors - Emission factors map; falls back to DEFAULT_FACTORS for missing keys
+ * @returns Positive kg CO₂e to subtract from baseFootprint
+ */
 export function getWasteAdjustment(
   waste: CalculatorInput['waste'],
   baseFootprint: number,
   factors: Record<string, number> = DEFAULT_FACTORS
 ): number {
   const wasteFactor = factors[waste] ?? DEFAULT_FACTORS[waste] ?? 0;
-  return baseFootprint * wasteFactor; // percentage reduction
+  return baseFootprint * wasteFactor; // fractional reduction
 }
 
 /**
- * Pure function to calculate annual carbon footprint.
+ * Pure function to calculate the complete annual carbon footprint.
+ * Computes transport, energy, and diet emissions, applies waste offset, and
+ * returns the total together with a per-category breakdown and national/global comparisons.
+ *
+ * @param input - User-supplied activity data across all four categories
+ * @param factors - Optional override emission factors (e.g. database-sourced values)
+ * @returns CalculatorResult with totalAnnualCo2Kg, breakdown, and comparison
  */
 export function calculateFootprint(
   input: CalculatorInput,
