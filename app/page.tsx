@@ -9,6 +9,7 @@ import {
 import CarbonReceipt from '@/components/ui/CarbonReceipt';
 import AuditFeed from '@/components/ui/AuditFeed';
 import { CalculatorInput, calculateFootprint } from '@/lib/calculator';
+import { isLocalStorageAvailable } from '@/lib/localAuth';
 
 export default function LandingPage() {
   // Calculator inputs state
@@ -39,6 +40,7 @@ export default function LandingPage() {
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // Form states
   const [email, setEmail] = useState('');
@@ -57,6 +59,21 @@ export default function LandingPage() {
   });
   const [statsRefreshedAt, setStatsRefreshedAt] = useState<Date | null>(null);
 
+  // Check for authentication state on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        setTimeout(() => {
+          setIsLoggedIn(true);
+        }, 0);
+      }
+    }
+  }, []);
+
+  const startGoogleLogin = () => {
+    window.location.href = '/api/auth/google';
+  };
 
   // Fetch live stats from API — refresh every 30 s
   const fetchStats = () => {
@@ -105,38 +122,43 @@ export default function LandingPage() {
     setAuthLoading(true);
 
     try {
-      const endpoint = authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
-      const payload = authMode === 'register' ? { email, password, name } : { email, password };
-      
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Authentication failed');
+      if (!isLocalStorageAvailable()) {
+        throw new Error('Local storage is not supported or is blocked in this browser (e.g. in private browsing mode). Please enable local storage/cookies to proceed.');
       }
 
       if (authMode === 'register') {
-        setAuthSuccess('Account created successfully! Logging in...');
-        // Auto-login after registration
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, name }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Registration failed');
+
+        // Automatically log in
         const loginRes = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ email, password }),
         });
         const loginData = await loginRes.json();
-        if (!loginRes.ok) throw new Error(loginData.error);
-        
-        // Save access token
+        if (!loginRes.ok) throw new Error(loginData.error || 'Login failed');
+
         localStorage.setItem('access_token', loginData.accessToken);
+        setAuthSuccess('Account created successfully! Saving calculator result...');
         await saveCalculatorResult(loginData.accessToken);
       } else {
-        localStorage.setItem('access_token', data.accessToken);
-        await saveCalculatorResult(data.accessToken);
+        const loginRes = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const loginData = await loginRes.json();
+        if (!loginRes.ok) throw new Error(loginData.error || 'Login failed');
+
+        localStorage.setItem('access_token', loginData.accessToken);
+        setAuthSuccess('Logged in successfully! Redirecting...');
+        await saveCalculatorResult(loginData.accessToken);
       }
     } catch (err: any) {
       setAuthError(err.message || 'An error occurred');
@@ -146,7 +168,7 @@ export default function LandingPage() {
 
   const saveCalculatorResult = async (token: string) => {
     try {
-      const saveRes = await fetch('/api/carbon/entries', {
+      const res = await fetch('/api/carbon/entries', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -154,22 +176,17 @@ export default function LandingPage() {
         },
         body: JSON.stringify(inputs)
       });
-
-      if (saveRes.ok) {
-        setAuthSuccess('Footprint saved! Redirecting to your dashboard...');
-        setTimeout(() => {
-          window.location.href = '/dashboard';
-        }, 1200);
-      } else {
-        window.location.href = '/dashboard';
+      if (!res.ok) {
+        throw new Error('Failed to save calculation to the database.');
       }
-    } catch {
+      setAuthSuccess('Footprint saved! Redirecting to your dashboard...');
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 1200);
+    } catch (err) {
+      console.error('Error saving calculator result:', err);
       window.location.href = '/dashboard';
     }
-  };
-
-  const startGoogleLogin = () => {
-    window.location.href = '/api/auth/google';
   };
 
   return (
@@ -182,15 +199,26 @@ export default function LandingPage() {
             EcoTrace
           </span>
         </div>
-        <button
-          onClick={() => {
-            setAuthMode('login');
-            setShowAuthModal(true);
-          }}
-          className="text-xs font-display font-medium px-4 py-2 bg-graphite text-paper hover:bg-graphite/90 active:scale-95 rounded transition cursor-pointer focus-ring"
-        >
-          LOG IN / REGISTER
-        </button>
+        {isLoggedIn ? (
+          <button
+            onClick={() => {
+              window.location.href = '/dashboard';
+            }}
+            className="text-xs font-display font-bold px-4 py-2 bg-moss text-paper hover:bg-moss/90 active:scale-95 rounded transition cursor-pointer focus-ring"
+          >
+            GO TO DASHBOARD
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              setAuthMode('login');
+              setShowAuthModal(true);
+            }}
+            className="text-xs font-display font-medium px-4 py-2 bg-graphite text-paper hover:bg-graphite/90 active:scale-95 rounded transition cursor-pointer focus-ring"
+          >
+            LOG IN / REGISTER
+          </button>
+        )}
       </header>
 
       {/* Hero / Main Section */}
@@ -207,6 +235,40 @@ export default function LandingPage() {
             <p className="font-sans text-base sm:text-lg text-graphite/70 max-w-xl">
               An activity-based carbon accountability ledger. Answer 4 questions to print your itemized footprint receipt. Save it to set your reduction targets.
             </p>
+            {/* Mobile quick action buttons */}
+            <div className="flex flex-col sm:hidden gap-3 pt-2">
+              {isLoggedIn ? (
+                <button
+                  onClick={() => {
+                    window.location.href = '/dashboard';
+                  }}
+                  className="w-full text-center text-xs font-display font-bold py-3 px-4 bg-moss text-paper hover:bg-moss/90 rounded transition cursor-pointer"
+                >
+                  GO TO DASHBOARD
+                </button>
+              ) : (
+                <div className="flex gap-2.5 w-full">
+                  <button
+                    onClick={() => {
+                      setAuthMode('login');
+                      setShowAuthModal(true);
+                    }}
+                    className="flex-1 text-center text-xs font-display font-bold py-3 px-4 bg-graphite text-paper hover:bg-graphite/90 rounded transition cursor-pointer"
+                  >
+                    LOG IN
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthMode('register');
+                      setShowAuthModal(true);
+                    }}
+                    className="flex-1 text-center text-xs font-display font-bold py-3.5 px-4 border border-graphite/20 hover:border-graphite text-graphite rounded transition cursor-pointer"
+                  >
+                    REGISTER
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Calculator Step Cards */}
@@ -277,6 +339,7 @@ export default function LandingPage() {
                         min="0"
                         max="500"
                         step="10"
+                        aria-label="Weekly Travel Distance"
                         value={inputs.transport.weeklyKm ?? 0}
                         onChange={(e) => handleInputChange('transport', 'weeklyKm', parseInt(e.target.value))}
                         className="w-full accent-ledger-red cursor-pointer h-1.5 bg-graphite/10 rounded-lg appearance-none"
@@ -288,7 +351,7 @@ export default function LandingPage() {
                       </div>
                     </div>
                   )}
-
+ 
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-xs font-bold font-display uppercase tracking-wider">
                       <span>Flights Taken (Per Year)</span>
@@ -299,6 +362,7 @@ export default function LandingPage() {
                       min="0"
                       max="12"
                       step="1"
+                      aria-label="Flights Taken Per Year"
                       value={inputs.transport.flightsPerYear ?? 0}
                       onChange={(e) => handleInputChange('transport', 'flightsPerYear', parseInt(e.target.value))}
                       className="w-full accent-ledger-red cursor-pointer h-1.5 bg-graphite/10 rounded-lg appearance-none"
@@ -311,7 +375,7 @@ export default function LandingPage() {
                   </div>
                 </motion.div>
               )}
-
+ 
               {/* Energy Questionnaire */}
               {activeStep === 'energy' && (
                 <motion.div
@@ -329,6 +393,7 @@ export default function LandingPage() {
                       min="0"
                       max="800"
                       step="20"
+                      aria-label="Monthly Electricity Usage"
                       value={inputs.energy.monthlyKwh}
                       onChange={(e) => handleInputChange('energy', 'monthlyKwh', parseInt(e.target.value))}
                       className="w-full accent-ledger-red cursor-pointer h-1.5 bg-graphite/10 rounded-lg appearance-none"
@@ -475,20 +540,27 @@ export default function LandingPage() {
                 {activeStep === 'transport' ? '1 / 4' : activeStep === 'energy' ? '2 / 4' : activeStep === 'diet' ? '3 / 4' : '4 / 4'}
               </span>
               <button
-                onClick={() => {
+                onClick={async () => {
                   const steps: ('transport' | 'energy' | 'diet' | 'waste')[] = ['transport', 'energy', 'diet', 'waste'];
                   const currentIndex = steps.indexOf(activeStep);
                   if (currentIndex < 3) {
                     setActiveStep(steps[currentIndex + 1]);
                   } else {
-                    // Triggers the signup modal
-                    setShowAuthModal(true);
-                    setAuthMode('register');
+                    // Triggers the signup modal or saves directly if logged in
+                    const token = localStorage.getItem('access_token');
+                    if (token) {
+                      setShowAuthModal(true);
+                      setAuthLoading(true);
+                      await saveCalculatorResult(token);
+                    } else {
+                      setAuthMode('register');
+                      setShowAuthModal(true);
+                    }
                   }
                 }}
                 className="flex items-center gap-1.5 px-4 py-2 bg-graphite text-paper rounded hover:bg-graphite/90 transition cursor-pointer focus-ring"
               >
-                <span>{activeStep === 'waste' ? 'SAVE TO LEDGER' : 'NEXT STEP'}</span>
+                <span>{activeStep === 'waste' ? (isLoggedIn ? 'SAVING RECORD...' : 'SAVE TO LEDGER') : 'NEXT STEP'}</span>
                 <ChevronRight className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -501,9 +573,16 @@ export default function LandingPage() {
             input={inputs}
             result={calcResult}
             showSaveButton={true}
-            onSave={() => {
-              setAuthMode('register');
-              setShowAuthModal(true);
+            onSave={async () => {
+              const token = localStorage.getItem('access_token');
+              if (token) {
+                setShowAuthModal(true);
+                setAuthLoading(true);
+                await saveCalculatorResult(token);
+              } else {
+                setAuthMode('register');
+                setShowAuthModal(true);
+              }
             }}
           />
         </div>
@@ -691,24 +770,37 @@ export default function LandingPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <button
-            onClick={() => {
-              setAuthMode('register');
-              setShowAuthModal(true);
-            }}
-            className="w-full sm:w-auto px-8 py-3.5 bg-graphite text-paper hover:bg-graphite/95 active:scale-95 font-display font-bold text-sm tracking-wider uppercase rounded transition cursor-pointer focus-ring"
-          >
-            CREATE FREE LEDGER
-          </button>
-          <button
-            onClick={startGoogleLogin}
-            className="w-full sm:w-auto px-8 py-3.5 border border-graphite/20 hover:border-graphite bg-paper hover:bg-paper/80 font-display font-bold text-sm tracking-wider uppercase rounded transition flex items-center justify-center gap-2 cursor-pointer focus-ring"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114-3.48 0-6.3-2.82-6.3-6.3s2.82-6.3 6.3-6.3c1.482 0 2.839.516 3.905 1.371l3.138-3.138C19.043 2.378 15.932 1 12.24 1C6.033 1 1 6.033 1 12.24s5.033 11.24 11.24 11.24c6.48 0 10.785-4.56 10.785-11.24 0-.765-.082-1.332-.2-1.955H12.24z" />
-            </svg>
-            <span>CONTINUE WITH GOOGLE</span>
-          </button>
+          {isLoggedIn ? (
+            <button
+              onClick={() => {
+                window.location.href = '/dashboard';
+              }}
+              className="w-full sm:w-auto px-8 py-3.5 bg-moss text-paper hover:bg-moss/95 active:scale-95 font-display font-bold text-sm tracking-wider uppercase rounded transition cursor-pointer focus-ring"
+            >
+              ACCESS YOUR LEDGER DASHBOARD
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => {
+                  setAuthMode('register');
+                  setShowAuthModal(true);
+                }}
+                className="w-full sm:w-auto px-8 py-3.5 bg-graphite text-paper hover:bg-graphite/95 active:scale-95 font-display font-bold text-sm tracking-wider uppercase rounded transition cursor-pointer focus-ring"
+              >
+                CREATE FREE LEDGER
+              </button>
+              <button
+                onClick={startGoogleLogin}
+                className="w-full sm:w-auto px-8 py-3.5 border border-graphite/20 hover:border-graphite bg-paper hover:bg-paper/80 font-display font-bold text-sm tracking-wider uppercase rounded transition flex items-center justify-center gap-2 cursor-pointer focus-ring"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114-3.48 0-6.3-2.82-6.3-6.3s2.82-6.3 6.3-6.3c1.482 0 2.839.516 3.905 1.371l3.138-3.138C19.043 2.378 15.932 1 12.24 1C6.033 1 1 6.033 1 12.24s5.033 11.24 11.24 11.24c6.48 0 10.785-4.56 10.785-11.24 0-.765-.082-1.332-.2-1.955H12.24z" />
+                </svg>
+                <span>CONTINUE WITH GOOGLE</span>
+              </button>
+            </>
+          )}
         </div>
       </section>
 
@@ -772,12 +864,13 @@ export default function LandingPage() {
               <form onSubmit={handleAuthSubmit} className="space-y-4">
                 {authMode === 'register' && (
                   <div className="space-y-1">
-                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider block text-graphite/60">
+                    <label htmlFor="register-name" className="text-[10px] font-mono font-bold uppercase tracking-wider block text-graphite/60">
                       Full Name
                     </label>
                     <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-graphite/40" />
+                      <User className="absolute left-3 top-3 h-4 w-4 text-graphite/40" aria-hidden="true" />
                       <input
+                        id="register-name"
                         type="text"
                         required
                         value={name}
@@ -790,12 +883,13 @@ export default function LandingPage() {
                 )}
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider block text-graphite/60">
+                  <label htmlFor="register-email" className="text-[10px] font-mono font-bold uppercase tracking-wider block text-graphite/60">
                     Email Address
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-graphite/40" />
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-graphite/40" aria-hidden="true" />
                     <input
+                      id="register-email"
                       type="email"
                       required
                       value={email}
@@ -807,12 +901,13 @@ export default function LandingPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider block text-graphite/60">
+                  <label htmlFor="register-password" className="text-[10px] font-mono font-bold uppercase tracking-wider block text-graphite/60">
                     Password
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-graphite/40" />
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-graphite/40" aria-hidden="true" />
                     <input
+                      id="register-password"
                       type="password"
                       required
                       value={password}
@@ -830,7 +925,7 @@ export default function LandingPage() {
                 >
                   {authLoading ? (
                     <>
-                      <svg className="animate-spin h-4 w-4 text-paper" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin h-4 w-4 text-paper" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
@@ -852,7 +947,7 @@ export default function LandingPage() {
                 onClick={startGoogleLogin}
                 className="w-full py-3 border border-graphite/20 bg-paper hover:bg-paper/80 text-graphite font-display font-bold text-xs tracking-wider uppercase rounded transition flex items-center justify-center gap-2 cursor-pointer focus-ring"
               >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114-3.48 0-6.3-2.82-6.3-6.3s2.82-6.3 6.3-6.3c1.482 0 2.839.516 3.905 1.371l3.138-3.138C19.043 2.378 15.932 1 12.24 1C6.033 1 1 6.033 1 12.24s5.033 11.24 11.24 11.24c6.48 0 10.785-4.56 10.785-11.24 0-.765-.082-1.332-.2-1.955H12.24z" />
                 </svg>
                 <span>SIGN IN WITH GOOGLE</span>

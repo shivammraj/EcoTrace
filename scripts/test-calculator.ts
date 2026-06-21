@@ -31,6 +31,40 @@ const testCases: { name: string; input: CalculatorInput; expectedTotalMin: numbe
     expectedTotalMin: 3995,
     expectedTotalMax: 4015,
   },
+  {
+    name: 'High meat, diesel car (120 km/wk, 6 flights), high electricity, commercial 15kg LPG, low recycling',
+    input: {
+      transport: { mode: 'car_diesel', weeklyKm: 120, flightsPerYear: 6 },
+      energy: { monthlyKwh: 300, cookingFuel: 'lpg', hasSolar: false, lpgCylinderKg: 15 },
+      diet: 'high_meat',
+      waste: 'low_recycling',
+    },
+    // Transport: (120 * 0.17 * 52) = 1060.8 kg. flights: 6 * 1000 * 0.25 = 1500 kg. Total = 2560.8 kg.
+    // Energy: electricity (300 * 0.82 * 12) = 2952 kg. LPG (15 * 3.0 * 12) = 540 kg. Total = 3492 kg.
+    // Diet: 7.2 * 365 = 2628 kg.
+    // Base total = 2560.8 + 3492 + 2628 = 8680.8 kg.
+    // Offset: low_recycling (0%) = 0 kg.
+    // Net total = 8680.8 kg (~8681 kg).
+    expectedTotalMin: 8670,
+    expectedTotalMax: 8690,
+  },
+  {
+    name: 'Electric car user (200 km/wk), modest electricity, PNG cooking, solar active, some recycling',
+    input: {
+      transport: { mode: 'car_electric', weeklyKm: 200, flightsPerYear: 0 },
+      energy: { monthlyKwh: 250, cookingFuel: 'png', hasSolar: true },
+      diet: 'vegetarian',
+      waste: 'some_recycling',
+    },
+    // Transport: (200 * 0.05 * 52) = 520 kg.
+    // Energy: electricity (250 * 0.82 * 12 * 0.3) = 738 kg. PNG (12 * 2.02 * 12) = 290.88 kg. Total = 1028.88 kg.
+    // Diet: 3.8 * 365 = 1387 kg.
+    // Base total = 520 + 1028.88 + 1387 = 2935.88 kg.
+    // Offset: some_recycling (5%) = 146.79 kg.
+    // Net total = 2935.88 - 146.79 = 2789.09 kg (~2789 kg).
+    expectedTotalMin: 2780,
+    expectedTotalMax: 2795,
+  },
 ];
 
 let failed = false;

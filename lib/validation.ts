@@ -30,6 +30,7 @@ export const calculatorInputSchema = z.object({
     monthlyKwh: z.number().min(0).default(0),
     cookingFuel: z.enum(['lpg', 'png', 'electric']),
     hasSolar: z.boolean().optional().default(false),
+    lpgCylinderKg: z.number().min(0).optional(),
   }),
   diet: z.enum(['high_meat', 'moderate_meat', 'vegetarian', 'vegan']),
   waste: z.enum(['low_recycling', 'some_recycling', 'high_recycling']),

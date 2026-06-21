@@ -118,14 +118,19 @@ export default function Dashboard() {
 
         setFormInputs({
           transport: {
-            mode: transItem?.subcategory || 'car_petrol',
+            mode: transItem?.subcategory?.split('_flights_')[0] || 'car_petrol',
             weeklyKm: transItem?.inputValue || 0,
-            flightsPerYear: Math.round((transItem?.co2Kg || 0) / 250),
+            flightsPerYear: transItem?.subcategory?.includes('_flights_')
+              ? Number(transItem.subcategory.split('_flights_')[1])
+              : Math.round((transItem?.co2Kg || 0) / 250),
           },
           energy: {
             monthlyKwh: energyItem?.inputValue || 120,
-            cookingFuel: energyItem?.subcategory?.split('cooking_')[1] || 'lpg',
+            cookingFuel: energyItem?.subcategory?.split('cooking_')[1]?.split('_')[0] || 'lpg',
             hasSolar: energyItem?.subcategory?.includes('solar') || false,
+            lpgCylinderKg: energyItem?.subcategory?.includes('_lpgKg_')
+              ? Number(energyItem.subcategory.split('_lpgKg_')[1])
+              : undefined,
           },
           diet: (dietItem?.subcategory?.replace('diet_', '') || 'moderate_meat') as any,
           waste: (wasteItem?.subcategory || 'some_recycling') as any,
@@ -714,14 +719,19 @@ export default function Dashboard() {
   // Build receipt input from saved DB items (now returned by summary API)
   const currentCalcInput = showReceipt && latestCalc.items?.length ? {
     transport: {
-      mode: latestCalc.items.find((i: any) => i.category === 'transport')?.subcategory || 'car_petrol',
+      mode: latestCalc.items.find((i: any) => i.category === 'transport')?.subcategory?.split('_flights_')[0] || 'car_petrol',
       weeklyKm: latestCalc.items.find((i: any) => i.category === 'transport')?.inputValue || 0,
-      flightsPerYear: Math.round((latestCalc.items.find((i: any) => i.category === 'transport')?.co2Kg || 0) / 250),
+      flightsPerYear: latestCalc.items.find((i: any) => i.category === 'transport')?.subcategory?.includes('_flights_')
+        ? Number(latestCalc.items.find((i: any) => i.category === 'transport')?.subcategory.split('_flights_')[1])
+        : Math.round((latestCalc.items.find((i: any) => i.category === 'transport')?.co2Kg || 0) / 250),
     },
     energy: {
       monthlyKwh: latestCalc.items.find((i: any) => i.category === 'energy')?.inputValue || 0,
-      cookingFuel: latestCalc.items.find((i: any) => i.category === 'energy')?.subcategory?.split('cooking_')[1] || 'electric',
+      cookingFuel: latestCalc.items.find((i: any) => i.category === 'energy')?.subcategory?.split('cooking_')[1]?.split('_')[0] || 'electric',
       hasSolar: latestCalc.items.find((i: any) => i.category === 'energy')?.subcategory?.includes('solar') || false,
+      lpgCylinderKg: latestCalc.items.find((i: any) => i.category === 'energy')?.subcategory?.includes('_lpgKg_')
+        ? Number(latestCalc.items.find((i: any) => i.category === 'energy')?.subcategory.split('_lpgKg_')[1])
+        : undefined,
     },
     diet: (latestCalc.items.find((i: any) => i.category === 'diet')?.subcategory?.replace('diet_', '') || 'moderate_meat') as any,
     waste: (latestCalc.items.find((i: any) => i.category === 'waste')?.subcategory || 'some_recycling') as any,
@@ -821,6 +831,7 @@ export default function Dashboard() {
                     <select
                       value={formInputs.transport.mode}
                       onChange={(e) => handleFormInputChange('transport', 'mode', e.target.value)}
+                      aria-label="Transport Mode"
                       className="bg-paper border border-graphite/20 p-2 rounded focus-ring text-xs font-mono cursor-pointer"
                     >
                       <option value="car_petrol">Car (Petrol)</option>
@@ -837,6 +848,7 @@ export default function Dashboard() {
                         type="number"
                         min="0"
                         placeholder="Weekly Km"
+                        aria-label="Weekly travel distance in kilometers"
                         value={formInputs.transport.weeklyKm ?? ''}
                         onChange={(e) => handleFormInputChange('transport', 'weeklyKm', parseInt(e.target.value) || 0)}
                         className="bg-paper border border-graphite/20 p-2 rounded focus-ring text-xs font-mono"
@@ -848,6 +860,7 @@ export default function Dashboard() {
                     <input
                       type="number"
                       min="0"
+                      aria-label="Flights per year"
                       value={formInputs.transport.flightsPerYear ?? ''}
                       onChange={(e) => handleFormInputChange('transport', 'flightsPerYear', parseInt(e.target.value) || 0)}
                       className="bg-paper border border-graphite/20 p-1.5 w-16 rounded focus-ring text-xs font-mono"
@@ -864,6 +877,7 @@ export default function Dashboard() {
                       <input
                         type="number"
                         min="0"
+                        aria-label="Monthly electricity usage in kilowatt-hours"
                         value={formInputs.energy.monthlyKwh}
                         onChange={(e) => handleFormInputChange('energy', 'monthlyKwh', parseInt(e.target.value) || 0)}
                         className="bg-paper border border-graphite/20 p-2 rounded focus-ring text-xs font-mono"
@@ -874,6 +888,7 @@ export default function Dashboard() {
                       <select
                         value={formInputs.energy.cookingFuel}
                         onChange={(e) => handleFormInputChange('energy', 'cookingFuel', e.target.value)}
+                        aria-label="Cooking Fuel type"
                         className="bg-paper border border-graphite/20 p-2 rounded focus-ring text-xs font-mono cursor-pointer"
                       >
                         <option value="lpg">LPG Cylinder</option>
@@ -887,6 +902,7 @@ export default function Dashboard() {
                       type="checkbox"
                       checked={formInputs.energy.hasSolar ?? false}
                       onChange={(e) => handleFormInputChange('energy', 'hasSolar', e.target.checked)}
+                      aria-label="Rooftop Solar Array Active"
                       className="accent-moss h-3.5 w-3.5"
                     />
                     <span className="text-[10px] text-graphite/70 uppercase">Rooftop Solar Array Active</span>
@@ -895,7 +911,7 @@ export default function Dashboard() {
                   {/* LPG Cylinder Weight — shown only when LPG is selected */}
                   {formInputs.energy.cookingFuel === 'lpg' && (
                     <div className="mt-2 space-y-1">
-                      <span className="text-[9px] text-graphite/50 uppercase block">LPG Cylinder Capacity:</span>
+                      <label htmlFor="lpg-cylinder-preset" className="text-[9px] text-graphite/50 uppercase block">LPG Cylinder Capacity:</label>
                       <div className="flex items-center gap-2">
                         <select
                           id="lpg-cylinder-preset"
@@ -910,6 +926,7 @@ export default function Dashboard() {
                               handleFormInputChange('energy', 'lpgCylinderKg', parseFloat(val));
                             }
                           }}
+                          aria-label="LPG Cylinder Capacity Preset"
                           className="flex-1 bg-paper border border-graphite/20 p-2 rounded focus-ring text-xs font-mono cursor-pointer"
                         >
                           <option value="14.2">14.2 kg (Standard)</option>
@@ -925,6 +942,7 @@ export default function Dashboard() {
                             max="50"
                             step="0.1"
                             placeholder="kg"
+                            aria-label="Custom LPG Cylinder Capacity in kilograms"
                             value={formInputs.energy.lpgCylinderKg ?? ''}
                             onChange={(e) =>
                               handleFormInputChange('energy', 'lpgCylinderKg', parseFloat(e.target.value) || 14.2)
@@ -946,6 +964,7 @@ export default function Dashboard() {
                   <select
                     value={formInputs.diet}
                     onChange={(e) => handleFormInputChange('diet', '', e.target.value)}
+                    aria-label="Dietary Profile"
                     className="w-full bg-paper border border-graphite/20 p-2 rounded focus-ring text-xs font-mono cursor-pointer"
                   >
                     <option value="high_meat">High Meat Diet</option>
@@ -961,6 +980,7 @@ export default function Dashboard() {
                   <select
                     value={formInputs.waste}
                     onChange={(e) => handleFormInputChange('waste', '', e.target.value)}
+                    aria-label="Waste Recycling Level"
                     className="w-full bg-paper border border-graphite/20 p-2 rounded focus-ring text-xs font-mono cursor-pointer"
                   >
                     <option value="low_recycling">Low Recycling</option>
@@ -977,7 +997,7 @@ export default function Dashboard() {
               >
                 {savingLog ? (
                   <>
-                    <svg className="animate-spin h-3.5 w-3.5 text-paper" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin h-3.5 w-3.5 text-paper" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>

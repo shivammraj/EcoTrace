@@ -61,7 +61,7 @@ export async function POST(request: Request) {
         data: {
           userId: user.userId,
           category: 'transport',
-          subcategory: input.transport.mode,
+          subcategory: `${input.transport.mode}${input.transport.flightsPerYear ? `_flights_${input.transport.flightsPerYear}` : ''}`,
           inputValue: input.transport.weeklyKm ?? 0,
           co2Kg: calcResult.breakdown.transport,
           entryDate,
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
         data: {
           userId: user.userId,
           category: 'energy',
-          subcategory: `electricity_grid_in+cooking_${input.energy.cookingFuel}`,
+          subcategory: `electricity_grid_in+cooking_${input.energy.cookingFuel}${input.energy.hasSolar ? '_solar' : ''}${input.energy.lpgCylinderKg ? `_lpgKg_${input.energy.lpgCylinderKg}` : ''}`,
           inputValue: input.energy.monthlyKwh,
           co2Kg: calcResult.breakdown.energy,
           entryDate,
