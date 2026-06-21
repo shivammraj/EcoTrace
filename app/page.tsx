@@ -196,7 +196,7 @@ export default function LandingPage() {
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-ledger-red"></div>
           <span className="font-display font-bold text-lg uppercase tracking-wider text-graphite">
-            EcoTrace
+            EcoTrace 🇮🇳
           </span>
         </div>
         {isLoggedIn ? (

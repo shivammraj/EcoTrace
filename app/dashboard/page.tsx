@@ -622,7 +622,7 @@ export default function Dashboard() {
     <div class="header">
       <div class="header-left">
         <div class="dot"></div>
-        <div><div class="brand">ECOTRACE</div><div class="subbrand">CARBON FOOTPRINT LEDGER</div></div>
+        <div><div class="brand">ECOTRACE 🇮🇳</div><div class="subbrand">CARBON FOOTPRINT LEDGER</div></div>
       </div>
       <div class="header-right">
         <div>CARBON FOOTPRINT REPORT</div>
@@ -763,7 +763,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             <div className="h-2.5 w-2.5 rounded-full bg-ledger-red"></div>
             <span className="font-display font-bold text-base uppercase tracking-wider text-graphite">
-              EcoTrace Dashboard
+              EcoTrace 🇮🇳 Dashboard
             </span>
           </div>
 

@@ -120,7 +120,7 @@ export default function CarbonReceipt({
       {/* Header */}
       <div className="text-center mb-6">
         <h2 className="font-display font-bold text-xl tracking-tight text-graphite uppercase">
-          EcoTrace Receipt
+          EcoTrace 🇮🇳 Receipt
         </h2>
         <p className="text-xs text-graphite/60 mt-1">CARBON FOOTPRINT ACCOUNTABILITY</p>
         <div className="border-t border-dashed border-graphite/20 my-3"></div>

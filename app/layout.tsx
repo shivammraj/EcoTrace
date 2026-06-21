@@ -21,11 +21,11 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EcoTrace — Your Carbon Footprint, Made Visible",
+  title: "EcoTrace 🇮🇳 — Your Carbon Footprint, Made Visible",
   description: "Know your carbon footprint in 60 seconds — then start shrinking it. Track emissions across transport, energy, diet, and waste, and save your history.",
   metadataBase: new URL("http://localhost:3000"),
   openGraph: {
-    title: "EcoTrace — Carbon Footprint awareness",
+    title: "EcoTrace 🇮🇳 — Carbon Footprint awareness",
     description: "Measure, understand, and reduce your environmental footprint.",
     type: "website",
   },
