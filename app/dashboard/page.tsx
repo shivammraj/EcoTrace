@@ -52,6 +52,7 @@ export default function Dashboard() {
   const [savingLog, setSavingLog] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [deletingEntry, setDeletingEntry] = useState<string | null>(null); // date string being deleted
+  const [factors, setFactors] = useState<Record<string, number> | undefined>(undefined);
 
 
 
@@ -186,6 +187,14 @@ export default function Dashboard() {
     handleAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
+
+  // Fetch emission factors on mount
+  useEffect(() => {
+    fetch('/api/carbon/factors')
+      .then(res => res.json())
+      .then(data => setFactors(data))
+      .catch(err => console.warn('Could not fetch emission factors in dashboard:', err));
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -741,7 +750,7 @@ export default function Dashboard() {
     totalAnnualCo2Kg: latestCalc.totalAnnualCo2Kg,
     breakdown: latestCalc.breakdown,
     comparison: summary.comparison,
-  } : calculateFootprint(formInputs);
+  } : calculateFootprint(formInputs, factors);
 
   // Compute worst emission category for targeted tips
   const worstCategory = showReceipt
@@ -1016,6 +1025,7 @@ export default function Dashboard() {
                 userName={user?.name || 'GREEN CITIZEN'}
                 date={latestCalc ? new Date(latestCalc.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : undefined}
                 showSaveButton={false}
+                factors={factors}
               />
               
               {latestCalc && (

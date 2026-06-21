@@ -228,6 +228,8 @@ export default function AuditFeed() {
           {/* Live toggle */}
           <button
             onClick={() => setIsLive(v => !v)}
+            aria-label="Toggle real-time audit feed"
+            aria-pressed={isLive}
             className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono font-bold border transition-all cursor-pointer ${
               isLive
                 ? 'bg-moss/10 border-moss/30 text-moss hover:bg-moss/20'
@@ -247,7 +249,7 @@ export default function AuditFeed() {
       </div>
 
       {/* ── Feed rows ── */}
-      <div ref={feedRef} className="divide-y divide-graphite/5 overflow-y-auto" style={{ maxHeight: '340px' }}>
+      <div ref={feedRef} role="log" aria-live="polite" className="divide-y divide-graphite/5 overflow-y-auto" style={{ maxHeight: '340px' }}>
         {entries.map((entry, idx) => (
           <div
             key={entry.id}

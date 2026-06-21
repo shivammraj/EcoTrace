@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { NATIONAL_AVG_KG, GLOBAL_AVG_KG } from '@/lib/calculator';
+import { NATIONAL_AVG_KG, GLOBAL_AVG_KG, DEFAULT_FACTORS } from '@/lib/calculator';
 
 interface CarbonReceiptProps {
   input: {
@@ -15,6 +15,7 @@ interface CarbonReceiptProps {
       monthlyKwh: number;
       cookingFuel: string;
       hasSolar?: boolean;
+      lpgCylinderKg?: number;
     };
     diet: string;
     waste: string;
@@ -38,6 +39,7 @@ interface CarbonReceiptProps {
   isSaving?: boolean;
   onSave?: () => void;
   showSaveButton?: boolean;
+  factors?: Record<string, number>;
 }
 
 export default function CarbonReceipt({
@@ -48,7 +50,9 @@ export default function CarbonReceipt({
   isSaving = false,
   onSave,
   showSaveButton = false,
+  factors,
 }: CarbonReceiptProps) {
+  const currentFactors = factors ?? DEFAULT_FACTORS;
   const formatNum = (val: number) => {
     return Math.abs(val).toLocaleString('en-US');
   };
@@ -115,6 +119,8 @@ export default function CarbonReceipt({
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
+      role="region"
+      aria-label="Emission Receipt"
       className="perforated-top perforated-bottom bg-paper text-graphite p-6 md:p-8 shadow-xl max-w-md w-full relative flex flex-col font-mono text-sm border-x border-dashed border-graphite/10"
     >
       {/* Header */}
@@ -150,7 +156,7 @@ export default function CarbonReceipt({
                 </span>
                 <span className="flex-1 border-b border-dotted border-graphite/30 mx-2 mb-1"></span>
                 <span className="text-graphite font-bold font-mono">
-                  +{formatNum(Math.round(result.breakdown.transport - (input.transport.flightsPerYear || 0) * 250))} kg
+                  +{formatNum(Math.round(input.transport.weeklyKm * (currentFactors[input.transport.mode] ?? 0.19) * 52))} kg
                 </span>
               </div>
             )}
@@ -161,7 +167,7 @@ export default function CarbonReceipt({
                 </span>
                 <span className="flex-1 border-b border-dotted border-graphite/30 mx-2 mb-1"></span>
                 <span className="text-graphite font-bold font-mono">
-                  +{formatNum(input.transport.flightsPerYear * 250)} kg
+                  +{formatNum(Math.round(input.transport.flightsPerYear * 1000 * (currentFactors['flight'] ?? 0.25)))} kg
                 </span>
               </div>
             )}
@@ -187,7 +193,7 @@ export default function CarbonReceipt({
               </span>
               <span className="flex-1 border-b border-dotted border-graphite/30 mx-2 mb-1"></span>
               <span className="text-graphite font-bold font-mono">
-                +{formatNum(Math.round(input.energy.monthlyKwh * 0.82 * 12))} kg
+                +{formatNum(Math.round(input.energy.monthlyKwh * (currentFactors['electricity_grid_in'] ?? 0.82) * 12))} kg
               </span>
             </div>
             {input.energy.cookingFuel !== 'electric' && (
@@ -197,7 +203,11 @@ export default function CarbonReceipt({
                 </span>
                 <span className="flex-1 border-b border-dotted border-graphite/30 mx-2 mb-1"></span>
                 <span className="text-graphite font-bold font-mono">
-                  +{formatNum(Math.round(input.energy.cookingFuel === 'lpg' ? 10 * 3.0 * 12 : 12 * 2.02 * 12))} kg
+                  +{formatNum(Math.round(
+                    input.energy.cookingFuel === 'lpg'
+                      ? (input.energy.lpgCylinderKg ?? 10) * (currentFactors['cooking_lpg'] ?? 3.0) * 12
+                      : 12 * (currentFactors['cooking_png'] ?? 2.02) * 12
+                  ))} kg
                 </span>
               </div>
             )}
@@ -206,7 +216,9 @@ export default function CarbonReceipt({
                 <span className="text-xs truncate mr-2">Solar offset credit (70%)</span>
                 <span className="flex-1 border-b border-dotted border-moss/40 mx-2 mb-1"></span>
                 <span className="font-bold font-mono">
-                  -{formatNum(Math.round(input.energy.monthlyKwh * 0.82 * 12 * 0.70))} kg
+                  -{formatNum(Math.round(
+                    input.energy.monthlyKwh * (currentFactors['electricity_grid_in'] ?? 0.82) * 12 * 0.70
+                  ))} kg
                 </span>
               </div>
             )}
@@ -302,6 +314,7 @@ export default function CarbonReceipt({
         <button
           onClick={onSave}
           disabled={isSaving}
+          aria-label="Save calculation to personal ledger"
           className="mt-6 w-full py-2.5 px-4 bg-graphite hover:bg-graphite/95 active:bg-graphite text-paper font-display font-medium rounded transition duration-200 focus-ring cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {isSaving ? (

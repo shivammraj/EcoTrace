@@ -1,4 +1,17 @@
 import { calculateFootprint, CalculatorInput } from '../lib/calculator';
+import {
+  hashPassword,
+  comparePassword,
+  generateRandomToken,
+  hashToken,
+  signAccessToken,
+  verifyAccessToken,
+} from '../lib/auth';
+import {
+  registerSchema,
+  loginSchema,
+  calculatorInputSchema,
+} from '../lib/validation';
 
 const testCases: { name: string; input: CalculatorInput; expectedTotalMin: number; expectedTotalMax: number }[] = [
   {
@@ -69,25 +82,191 @@ const testCases: { name: string; input: CalculatorInput; expectedTotalMin: numbe
 
 let failed = false;
 
-for (const tc of testCases) {
-  console.log(`Running test case: ${tc.name}`);
-  const result = calculateFootprint(tc.input);
-  console.log(`  Result: ${result.totalAnnualCo2Kg} kg CO2e`);
-  console.log(`  Breakdown:`, result.breakdown);
-  console.log(`  Comparison:`, result.comparison);
+async function runTests() {
+  for (const tc of testCases) {
+    console.log(`Running test case: ${tc.name}`);
+    const result = calculateFootprint(tc.input);
+    console.log(`  Result: ${result.totalAnnualCo2Kg} kg CO2e`);
+    console.log(`  Breakdown:`, result.breakdown);
+    console.log(`  Comparison:`, result.comparison);
 
-  if (result.totalAnnualCo2Kg >= tc.expectedTotalMin && result.totalAnnualCo2Kg <= tc.expectedTotalMax) {
-    console.log(`  ✅ PASSED`);
+    if (result.totalAnnualCo2Kg >= tc.expectedTotalMin && result.totalAnnualCo2Kg <= tc.expectedTotalMax) {
+      console.log(`  ✅ PASSED`);
+    } else {
+      console.error(`  ❌ FAILED. Expected total between ${tc.expectedTotalMin} and ${tc.expectedTotalMax}, got ${result.totalAnnualCo2Kg}`);
+      failed = true;
+    }
+    console.log('-------------------------------------------');
+  }
+
+  await runAuthTests();
+  await runValidationTests();
+
+  if (failed) {
+    console.error('❌ SOME TESTS FAILED.');
+    process.exit(1);
   } else {
-    console.error(`  ❌ FAILED. Expected total between ${tc.expectedTotalMin} and ${tc.expectedTotalMax}, got ${result.totalAnnualCo2Kg}`);
+    console.log('✅ ALL TESTS PASSED SUCCESSFULLY!');
+    process.exit(0);
+  }
+}
+
+async function runAuthTests() {
+  console.log('\n===========================================');
+  console.log('Running Authentication Helper Tests');
+  console.log('===========================================');
+
+  try {
+    const password = 'test-secure-password-123';
+    const hash = await hashPassword(password);
+    if (hash === password) {
+      throw new Error('hashPassword returned raw password instead of hash');
+    }
+    
+    const isCorrect = await comparePassword(password, hash);
+    if (!isCorrect) {
+      throw new Error('comparePassword failed to verify correct password hash');
+    }
+    
+    const isIncorrect = await comparePassword('wrong-password', hash);
+    if (isIncorrect) {
+      throw new Error('comparePassword verified incorrect password');
+    }
+    console.log('✅ Password hashing & comparison tests passed');
+
+    const token = generateRandomToken();
+    if (typeof token !== 'string' || token.length !== 80) {
+      throw new Error(`generateRandomToken returned invalid token: ${token}`);
+    }
+    console.log('✅ Random token generation tests passed');
+
+    const tokenHash = hashToken('my-token');
+    const expectedHash = 'fece50d2287f7245aea5819b75f95ee8bec295a14f8ef1e7a31f17f1dae9df44';
+    if (tokenHash !== expectedHash) {
+      throw new Error(`hashToken returned incorrect SHA-256 hash: ${tokenHash}`);
+    }
+    console.log('✅ Token hashing tests passed');
+
+    const payload = { userId: 'user-123', email: 'user@example.com', name: 'John Doe' };
+    const jwt = await signAccessToken(payload);
+    if (typeof jwt !== 'string') {
+      throw new Error('signAccessToken did not return a string');
+    }
+    
+    const verifiedPayload = await verifyAccessToken(jwt);
+    if (!verifiedPayload || verifiedPayload.userId !== payload.userId || verifiedPayload.email !== payload.email) {
+      throw new Error('verifyAccessToken failed to verify valid JWT or payload mismatch');
+    }
+
+    const invalidVerify = await verifyAccessToken(jwt + 'modified');
+    if (invalidVerify !== null) {
+      throw new Error('verifyAccessToken successfully verified a corrupted token');
+    }
+    console.log('✅ JWT access token signing & verification tests passed');
+  } catch (error: any) {
+    console.error('❌ Auth tests failed:', error.message || error);
     failed = true;
   }
-  console.log('-------------------------------------------');
 }
 
-if (failed) {
-  process.exit(1);
-} else {
-  console.log('All calculator tests passed successfully!');
-  process.exit(0);
+async function runValidationTests() {
+  console.log('\n===========================================');
+  console.log('Running Validation Schema Tests');
+  console.log('===========================================');
+
+  try {
+    const validRegister = registerSchema.safeParse({
+      email: 'valid@example.com',
+      password: 'mypassword123',
+      name: 'Jane Doe',
+    });
+    if (!validRegister.success) {
+      throw new Error(`registerSchema failed on valid input: ${JSON.stringify(validRegister.error.format())}`);
+    }
+
+    const invalidRegisterEmail = registerSchema.safeParse({
+      email: 'invalid-email',
+      password: 'mypassword123',
+      name: 'Jane Doe',
+    });
+    if (invalidRegisterEmail.success) {
+      throw new Error('registerSchema accepted invalid email address');
+    }
+
+    const invalidRegisterPassword = registerSchema.safeParse({
+      email: 'valid@example.com',
+      password: 'short',
+      name: 'Jane Doe',
+    });
+    if (invalidRegisterPassword.success) {
+      throw new Error('registerSchema accepted password shorter than 8 characters');
+    }
+
+    const invalidRegisterName = registerSchema.safeParse({
+      email: 'valid@example.com',
+      password: 'mypassword123',
+      name: '',
+    });
+    if (invalidRegisterName.success) {
+      throw new Error('registerSchema accepted empty name');
+    }
+    console.log('✅ Register validation schema tests passed');
+
+    const validLogin = loginSchema.safeParse({
+      email: 'user@example.com',
+      password: 'password123',
+    });
+    if (!validLogin.success) {
+      throw new Error('loginSchema failed on valid login inputs');
+    }
+
+    const invalidLoginEmail = loginSchema.safeParse({
+      email: 'invalid-email',
+      password: 'password123',
+    });
+    if (invalidLoginEmail.success) {
+      throw new Error('loginSchema accepted invalid email');
+    }
+    console.log('✅ Login validation schema tests passed');
+
+    const validCalc = calculatorInputSchema.safeParse({
+      transport: { mode: 'car_petrol', weeklyKm: 120, flightsPerYear: 2 },
+      energy: { monthlyKwh: 200, cookingFuel: 'lpg', hasSolar: false },
+      diet: 'vegetarian',
+      waste: 'some_recycling',
+    });
+    if (!validCalc.success) {
+      throw new Error(`calculatorInputSchema failed on valid input: ${JSON.stringify(validCalc.error.format())}`);
+    }
+
+    const defaultCalc = calculatorInputSchema.safeParse({
+      transport: { mode: 'walk_cycle' },
+      energy: { cookingFuel: 'electric' },
+      diet: 'vegan',
+      waste: 'high_recycling',
+    });
+    if (!defaultCalc.success) {
+      throw new Error('calculatorInputSchema failed with default values omitted');
+    }
+    const data = defaultCalc.data;
+    if (data.transport.weeklyKm !== 0 || data.transport.flightsPerYear !== 0 || data.energy.monthlyKwh !== 0 || data.energy.hasSolar !== false) {
+      throw new Error('calculatorInputSchema did not apply correct default values');
+    }
+
+    const invalidCalcTransport = calculatorInputSchema.safeParse({
+      transport: { mode: 'invalid_mode' },
+      energy: { cookingFuel: 'electric' },
+      diet: 'vegan',
+      waste: 'high_recycling',
+    });
+    if (invalidCalcTransport.success) {
+      throw new Error('calculatorInputSchema accepted invalid transport mode');
+    }
+    console.log('✅ Calculator validation schema tests passed');
+  } catch (error: any) {
+    console.error('❌ Validation tests failed:', error.message || error);
+    failed = true;
+  }
 }
+
+runTests();

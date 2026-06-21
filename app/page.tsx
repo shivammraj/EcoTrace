@@ -28,8 +28,18 @@ export default function LandingPage() {
     waste: 'some_recycling',
   });
 
+  const [factors, setFactors] = useState<Record<string, number> | undefined>(undefined);
+
+  // Fetch factors on mount
+  useEffect(() => {
+    fetch('/api/carbon/factors')
+      .then(res => res.json())
+      .then(data => setFactors(data))
+      .catch(err => console.warn('Could not fetch emission factors:', err));
+  }, []);
+
   // Calculate footprint locally for sub-millisecond updates
-  const calcResult = calculateFootprint(inputs);
+  const calcResult = calculateFootprint(inputs, factors);
   
   // Active tab in calculator questionnaire
   const [activeStep, setActiveStep] = useState<'transport' | 'energy' | 'diet' | 'waste'>('transport');
@@ -273,10 +283,13 @@ export default function LandingPage() {
 
           {/* Calculator Step Cards */}
           <div className="border border-graphite/10 rounded-lg overflow-hidden bg-paper/60 backdrop-blur-sm">
-            <div className="bg-paper border-b border-graphite/10 flex divide-x divide-graphite/10 text-xs font-display">
+            <div role="tablist" aria-label="Carbon calculator questionnaire tabs" className="bg-paper border-b border-graphite/10 flex divide-x divide-graphite/10 text-xs font-display">
               {(['transport', 'energy', 'diet', 'waste'] as const).map((step) => (
                 <button
                   key={step}
+                  role="tab"
+                  aria-selected={activeStep === step}
+                  aria-controls={`${step}-panel`}
                   onClick={() => setActiveStep(step)}
                   className={`flex-1 py-3.5 text-center font-bold tracking-wider uppercase transition cursor-pointer focus-ring ${
                     activeStep === step 
@@ -293,6 +306,9 @@ export default function LandingPage() {
               {/* Transport questionnaire */}
               {activeStep === 'transport' && (
                 <motion.div
+                  id="transport-panel"
+                  role="tabpanel"
+                  aria-label="Transport Questionnaire"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   className="space-y-6"
@@ -301,7 +317,7 @@ export default function LandingPage() {
                     <label className="text-xs font-bold font-display uppercase tracking-wider block text-graphite/80">
                       Primary Transport Mode
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div role="group" aria-label="Primary Transport Mode" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {[
                         { id: 'car_petrol', label: 'Car (Petrol)', icon: Car },
                         { id: 'car_diesel', label: 'Car (Diesel)', icon: Car },
@@ -315,6 +331,7 @@ export default function LandingPage() {
                         <button
                           key={item.id}
                           onClick={() => handleInputChange('transport', 'mode', item.id)}
+                          aria-pressed={inputs.transport.mode === item.id}
                           className={`p-3 border rounded text-left transition flex flex-col justify-between h-20 cursor-pointer focus-ring ${
                             inputs.transport.mode === item.id
                               ? 'border-graphite bg-graphite/5 font-bold'
@@ -379,6 +396,9 @@ export default function LandingPage() {
               {/* Energy Questionnaire */}
               {activeStep === 'energy' && (
                 <motion.div
+                  id="energy-panel"
+                  role="tabpanel"
+                  aria-label="Energy Questionnaire"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   className="space-y-6"
@@ -409,7 +429,7 @@ export default function LandingPage() {
                     <label className="text-xs font-bold font-display uppercase tracking-wider block text-graphite/80">
                       Primary Cooking Fuel
                     </label>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div role="group" aria-label="Primary Cooking Fuel" className="grid grid-cols-3 gap-3">
                       {[
                         { id: 'lpg', label: 'LPG Gas', desc: 'Liquid Petroleum' },
                         { id: 'png', label: 'PNG Gas', desc: 'Piped Natural' },
@@ -417,7 +437,9 @@ export default function LandingPage() {
                       ].map((fuel) => (
                         <button
                           key={fuel.id}
+                          type="button"
                           onClick={() => handleInputChange('energy', 'cookingFuel', fuel.id)}
+                          aria-pressed={inputs.energy.cookingFuel === fuel.id}
                           className={`p-3 border rounded text-left transition flex flex-col justify-between h-20 cursor-pointer focus-ring ${
                             inputs.energy.cookingFuel === fuel.id
                               ? 'border-graphite bg-graphite/5 font-bold'
@@ -446,7 +468,7 @@ export default function LandingPage() {
                         onChange={(e) => handleInputChange('energy', 'hasSolar', e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-9 h-5 bg-graphite/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-paper after:border-graphite/30 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-moss"></div>
+                      <div className="w-9 h-5 bg-graphite/10 peer-focus:ring-2 peer-focus:ring-moss peer-focus:ring-offset-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-paper after:border-graphite/30 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-moss"></div>
                     </label>
                   </div>
                 </motion.div>
@@ -455,6 +477,9 @@ export default function LandingPage() {
               {/* Diet Questionnaire */}
               {activeStep === 'diet' && (
                 <motion.div
+                  id="diet-panel"
+                  role="tabpanel"
+                  aria-label="Dietary habits Questionnaire"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   className="space-y-4"
@@ -462,7 +487,7 @@ export default function LandingPage() {
                   <label className="text-xs font-bold font-display uppercase tracking-wider block text-graphite/80">
                     Dietary habits (Primary Intake)
                   </label>
-                  <div className="space-y-2.5">
+                  <div role="group" aria-label="Dietary habits" className="space-y-2.5">
                     {[
                       { id: 'high_meat', title: 'High Meat', desc: 'Frequent red meat, poultry, and dairy consumption (~7.2 kg CO2e/day)' },
                       { id: 'moderate_meat', title: 'Moderate Meat', desc: 'Occasional meat, balanced with vegetables, grains, and dairy (~5.6 kg CO2e/day)' },
@@ -471,7 +496,9 @@ export default function LandingPage() {
                     ].map((item) => (
                       <button
                         key={item.id}
+                        type="button"
                         onClick={() => handleInputChange('diet', '', item.id)}
+                        aria-pressed={inputs.diet === item.id}
                         className={`w-full p-4 border rounded text-left transition flex items-center justify-between cursor-pointer focus-ring ${
                           inputs.diet === item.id
                             ? 'border-graphite bg-graphite/5 font-bold'
@@ -496,6 +523,9 @@ export default function LandingPage() {
               {/* Waste Questionnaire */}
               {activeStep === 'waste' && (
                 <motion.div
+                  id="waste-panel"
+                  role="tabpanel"
+                  aria-label="Waste Recycling Questionnaire"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   className="space-y-4"
@@ -503,7 +533,7 @@ export default function LandingPage() {
                   <label className="text-xs font-bold font-display uppercase tracking-wider block text-graphite/80">
                     Recycling & Composting Habit
                   </label>
-                  <div className="space-y-2.5">
+                  <div role="group" aria-label="Recycling & Composting Habit" className="space-y-2.5">
                     {[
                       { id: 'low_recycling', title: 'Low Recycling / No Sorting', desc: 'Most waste goes directly to the landfill bin (0% reduction)' },
                       { id: 'some_recycling', title: 'Some Sorting & Recycling', desc: 'Sort plastics, metal, paper occasionally; basic waste awareness (5% offset credit)' },
@@ -511,7 +541,9 @@ export default function LandingPage() {
                     ].map((item) => (
                       <button
                         key={item.id}
+                        type="button"
                         onClick={() => handleInputChange('waste', '', item.id)}
+                        aria-pressed={inputs.waste === item.id}
                         className={`w-full p-4 border rounded text-left transition flex items-center justify-between cursor-pointer focus-ring ${
                           inputs.waste === item.id
                             ? 'border-graphite bg-graphite/5 font-bold'
@@ -572,6 +604,7 @@ export default function LandingPage() {
           <CarbonReceipt
             input={inputs}
             result={calcResult}
+            factors={factors}
             showSaveButton={true}
             onSave={async () => {
               const token = localStorage.getItem('access_token');
@@ -831,6 +864,7 @@ export default function LandingPage() {
                   setAuthError('');
                   setAuthSuccess('');
                 }}
+                aria-label="Close modal"
                 className="absolute top-4 right-4 text-graphite/50 hover:text-graphite cursor-pointer focus-ring"
               >
                 ✕

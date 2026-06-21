@@ -291,35 +291,39 @@ export default function EcoQuotes({ worstCategory = 'transport' }: EcoQuotesProp
 
         <div className="divide-y divide-graphite/5">
           {tips.map((tip, i) => (
-            <div
+            <button
               key={i}
-              className={`px-5 py-4 flex items-start gap-3 cursor-pointer transition-all group ${
+              type="button"
+              aria-expanded={tipIdx === i}
+              aria-controls={`tip-desc-${i}`}
+              className={`w-full text-left px-5 py-4 flex items-start gap-3 transition-all group focus-ring cursor-pointer outline-none border-none ${
                 tipIdx === i ? 'bg-moss/[0.04]' : 'hover:bg-graphite/[0.02]'
               }`}
               onClick={() => setTipIdx(i)}
             >
-              <span className="text-xl shrink-0 mt-0.5">{tip.icon}</span>
+              <span className="text-xl shrink-0 mt-0.5" aria-hidden="true">{tip.icon}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2 mb-0.5">
-                  <p className="font-display font-bold text-xs text-graphite group-hover:text-graphite/90">
+                  <span className="font-display font-bold text-xs text-graphite group-hover:text-graphite/90 block">
                     {tip.title}
-                  </p>
+                  </span>
                   <span className="font-mono text-[9px] text-moss font-bold shrink-0">{tip.saving}</span>
                 </div>
                 {/* Expand description when selected */}
                 <div
+                  id={`tip-desc-${i}`}
                   className="overflow-hidden transition-all duration-300"
                   style={{ maxHeight: tipIdx === i ? '80px' : '0px' }}
                 >
-                  <p className="font-sans text-[11px] text-graphite/55 leading-relaxed pt-1">
+                  <span className="font-sans text-[11px] text-graphite/55 leading-relaxed pt-1 block select-text">
                     {tip.description}
-                  </p>
+                  </span>
                 </div>
                 {tipIdx !== i && (
-                  <p className="font-sans text-[11px] text-graphite/40 truncate">{tip.description}</p>
+                  <span className="font-sans text-[11px] text-graphite/40 truncate block">{tip.description}</span>
                 )}
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
